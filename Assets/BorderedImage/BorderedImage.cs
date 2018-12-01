@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 using UnityEngine.Sprites;
 using UnityEngine.UI;
 
@@ -36,7 +37,7 @@ namespace BorderedImage
                 SetMaterialDirty();
             }
         }
-        
+
         public Vector4 BorderRadius
         {
             set
@@ -83,7 +84,7 @@ namespace BorderedImage
                     GenerateSimpleSprite(toFill);
                     break;
                 case Type.Tiled:
-                    GenerateSimpleSprite(toFill);
+                    GenerateTiledSprite(toFill);
                     break;
                 case Type.Filled:
                     base.OnPopulateMesh(toFill);
@@ -152,11 +153,168 @@ namespace BorderedImage
             vh.AddTriangle(2, 3, 0);
         }
 
-        private Material SetMaterialValues(ImageMaterialInfo info, Material baseMaterial)
+        private void GenerateTiledSprite(VertexHelper vh)
+        {
+            Vector4 vector1;
+            Vector4 vector2;
+            Vector4 vector3;
+            Vector2 vector4;
+            if (overrideSprite != null)
+            {
+                vector1 = DataUtility.GetOuterUV(overrideSprite);
+                vector2 = DataUtility.GetInnerUV(overrideSprite);
+                vector3 = overrideSprite.border;
+                vector4 = overrideSprite.rect.size;
+            }
+            else
+            {
+                vector1 = Vector4.zero;
+                vector2 = Vector4.zero;
+                vector3 = Vector4.zero;
+                vector4 = Vector2.one * 100f;
+            }
+
+            var pixelAdjustedRect = GetPixelAdjustedRect();
+            var num1 = (vector4.x - vector3.x - vector3.z) / pixelsPerUnit;
+            var num2 = (vector4.y - vector3.y - vector3.w) / pixelsPerUnit;
+            vector3 = GetAdjustedBorders(vector3 / pixelsPerUnit, pixelAdjustedRect);
+            var uvMin = new Vector2(vector2.x, vector2.y);
+            var vector5 = new Vector2(vector2.z, vector2.w);
+            UIVertex.simpleVert.color = color;
+            var x1 = vector3.x;
+            var x2 = pixelAdjustedRect.width - vector3.z;
+            var y1 = vector3.y;
+            var y2 = pixelAdjustedRect.height - vector3.w;
+            vh.Clear();
+            var uvMax = vector5;
+            if (Math.Abs(num1) < 0.1f)
+                num1 = x2 - x1;
+            if (Math.Abs(num2) < 0.1f)
+                num2 = y2 - y1;
+            if (fillCenter)
+            {
+                var y3 = y1;
+                while (y3 < (double) y2)
+                {
+                    var y4 = y3 + num2;
+                    if (y4 > (double) y2)
+                    {
+                        uvMax.y = uvMin.y + (float) ((vector5.y - (double) uvMin.y) *
+                                                     (y2 - (double) y3) / (y4 - (double) y3));
+                        y4 = y2;
+                    }
+
+                    uvMax.x = vector5.x;
+                    var x3 = x1;
+                    while (x3 < (double) x2)
+                    {
+                        var x4 = x3 + num1;
+                        if (x4 > (double) x2)
+                        {
+                            uvMax.x = uvMin.x + (float) ((vector5.x - (double) uvMin.x) *
+                                                         (x2 - (double) x3) / (x4 - (double) x3));
+                            x4 = x2;
+                        }
+
+                        AddQuad(vh, new Vector2(x3, y3) + pixelAdjustedRect.position,
+                            new Vector2(x4, y4) + pixelAdjustedRect.position, color, uvMin, uvMax);
+                        x3 += num1;
+                    }
+
+                    y3 += num2;
+                }
+            }
+
+            if (!hasBorder) return;
+
+            var vector6 = vector5;
+            var y5 = y1;
+            while (y5 < (double) y2)
+            {
+                var y3 = y5 + num2;
+                if (y3 > (double) y2)
+                {
+                    vector6.y = uvMin.y + (float) ((vector5.y - (double) uvMin.y) *
+                                                   (y2 - (double) y5) / (y3 - (double) y5));
+                    y3 = y2;
+                }
+
+                AddQuad(vh, new Vector2(0.0f, y5) + pixelAdjustedRect.position,
+                    new Vector2(x1, y3) + pixelAdjustedRect.position, color,
+                    new Vector2(vector1.x, uvMin.y), new Vector2(uvMin.x, vector6.y));
+                AddQuad(vh, new Vector2(x2, y5) + pixelAdjustedRect.position,
+                    new Vector2(pixelAdjustedRect.width, y3) + pixelAdjustedRect.position, color,
+                    new Vector2(vector5.x, uvMin.y), new Vector2(vector1.z, vector6.y));
+                y5 += num2;
+            }
+
+            vector6 = vector5;
+            var x5 = x1;
+            while (x5 < (double) x2)
+            {
+                var x3 = x5 + num1;
+                if (x3 > (double) x2)
+                {
+                    vector6.x = uvMin.x + (float) ((vector5.x - (double) uvMin.x) *
+                                                   (x2 - (double) x5) / (x3 - (double) x5));
+                    x3 = x2;
+                }
+
+                AddQuad(vh, new Vector2(x5, 0.0f) + pixelAdjustedRect.position,
+                    new Vector2(x3, y1) + pixelAdjustedRect.position, color,
+                    new Vector2(uvMin.x, vector1.y), new Vector2(vector6.x, uvMin.y));
+                AddQuad(vh, new Vector2(x5, y2) + pixelAdjustedRect.position,
+                    new Vector2(x3, pixelAdjustedRect.height) + pixelAdjustedRect.position, color,
+                    new Vector2(uvMin.x, vector5.y), new Vector2(vector6.x, vector1.w));
+                x5 += num1;
+            }
+
+            AddQuad(vh, new Vector2(0.0f, 0.0f) + pixelAdjustedRect.position,
+                new Vector2(x1, y1) + pixelAdjustedRect.position, color,
+                new Vector2(vector1.x, vector1.y), new Vector2(uvMin.x, uvMin.y));
+            AddQuad(vh, new Vector2(x2, 0.0f) + pixelAdjustedRect.position,
+                new Vector2(pixelAdjustedRect.width, y1) + pixelAdjustedRect.position, color,
+                new Vector2(vector5.x, vector1.y), new Vector2(vector1.z, uvMin.y));
+            AddQuad(vh, new Vector2(0.0f, y2) + pixelAdjustedRect.position,
+                new Vector2(x1, pixelAdjustedRect.height) + pixelAdjustedRect.position, color,
+                new Vector2(vector1.x, vector5.y), new Vector2(uvMin.x, vector1.w));
+            AddQuad(vh, new Vector2(x2, y2) + pixelAdjustedRect.position,
+                new Vector2(pixelAdjustedRect.width, pixelAdjustedRect.height) + pixelAdjustedRect.position,
+                color, new Vector2(vector5.x, vector5.y), new Vector2(vector1.z, vector1.w));
+        }
+
+        private static Vector4 GetAdjustedBorders(Vector4 border, Rect rect)
+        {
+            for (var index = 0; index <= 1; ++index)
+            {
+                var num1 = border[index] + border[index + 2];
+                if (!(rect.size[index] < (double) num1) || !(Math.Abs(num1) > 0.1f)) continue;
+
+                var num2 = rect.size[index] / num1;
+                border[index] *= num2;
+                border[index + 2] *= num2;
+            }
+
+            return border;
+        }
+
+        private static void AddQuad(VertexHelper vertexHelper, Vector2 posMin, Vector2 posMax, Color32 color,
+            Vector2 uvMin, Vector2 uvMax)
+        {
+            var currentVerticesCount = vertexHelper.currentVertCount;
+            vertexHelper.AddVert(new Vector3(posMin.x, posMin.y, 0.0f), color, new Vector2(uvMin.x, uvMin.y));
+            vertexHelper.AddVert(new Vector3(posMin.x, posMax.y, 0.0f), color, new Vector2(uvMin.x, uvMax.y));
+            vertexHelper.AddVert(new Vector3(posMax.x, posMax.y, 0.0f), color, new Vector2(uvMax.x, uvMax.y));
+            vertexHelper.AddVert(new Vector3(posMax.x, posMin.y, 0.0f), color, new Vector2(uvMax.x, uvMin.y));
+            vertexHelper.AddTriangle(currentVerticesCount, currentVerticesCount + 1, currentVerticesCount + 2);
+            vertexHelper.AddTriangle(currentVerticesCount + 2, currentVerticesCount + 3, currentVerticesCount);
+        }
+
+        private static Material SetMaterialValues(ImageMaterialInfo info, Material baseMaterial)
         {
             if (baseMaterial == null)
             {
-                throw new System.ArgumentNullException("baseMaterial");
+                throw new ArgumentNullException("baseMaterial");
             }
 
             if (baseMaterial.shader.name != "UI/Bordered Image")

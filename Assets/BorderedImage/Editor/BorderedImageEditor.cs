@@ -31,8 +31,9 @@ namespace BorderedImage.Editor
             EditorGUILayout.PropertyField(_falloffDist);
             EditorGUILayout.PropertyField(_borderRadius, true);
             RaycastControlsGUI();
-            EditorGUILayout.Space();
+            // TypeGUI();
             NativeSizeButtonGUI();
+            EditorGUILayout.Space();
             serializedObject.ApplyModifiedProperties();
         }
 

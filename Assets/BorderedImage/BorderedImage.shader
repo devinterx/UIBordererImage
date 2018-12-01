@@ -98,10 +98,8 @@
 				return OUT;
 			}
 			
-			half visible(half2 coord, half4 r) {
-			    r = half4(r.x / 100, r.y / 100, r.z / 100, r.w / 100);
-			
-				half4 p = half4(coord.x, coord.y, 1 - coord.x, 1 - coord.y);
+			half visible(half2 c, half4 r) {
+				half4 p = half4(c.x, c.y, 1 - c.x, 1 - c.y);
 				half v = min(min(min(p.x, p.y), p.z), p.w);
 				bool4 b = bool4(all(p.xw < r.x), all(p.zw < r.y), all(p.zy < r.z), all(p.xy < r.w));
 				half4 vis = r - half4(length(p.xw - r.x), length(p.zw - r.y), length(p.zy - r.z), length(p.xy - r.w));
@@ -121,10 +119,10 @@
 				
 				if (_BorderSize > 0) {
 					half l = (_BorderSize + 1 / _PixelWorldScale) / 2;
-				 	color.a *= saturate((l - distance(visible(IN.texcoord, _BorderRadius), l)) * _PixelWorldScale);
+				 	color.a *= saturate((l - distance(visible(IN.texcoord, _BorderRadius / 100), l)) * _PixelWorldScale);
 				}
 				else {
-					color.a = saturate(visible(IN.texcoord, _BorderRadius) * _PixelWorldScale);
+					color.a = saturate(visible(IN.texcoord, _BorderRadius / 100) * _PixelWorldScale);
 				}
 				return color;
 			}
